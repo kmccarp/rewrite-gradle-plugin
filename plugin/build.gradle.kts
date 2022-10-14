@@ -134,8 +134,9 @@ tasks.register<Test>("testGradleNightlies") {
     jvmArgumentProviders.add(GradleVersionsCommandLineArgumentProvider(GradleVersionData::getNightlyVersions))
 }
 
-tasks.withType<Test>() {
+tasks.withType<Test> {
     useJUnitPlatform()
+    jvmArgs("-Xmx512m")
 }
 
 val gVP = tasks.register("generateVersionsProperties") {

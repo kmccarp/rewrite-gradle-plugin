@@ -17,7 +17,9 @@ package org.openrewrite.gradle;
 
 import org.gradle.api.Project;
 import org.gradle.internal.service.ServiceRegistry;
+import org.openrewrite.internal.TreeVisitorAdapter;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -26,7 +28,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.Callable;
@@ -34,11 +35,22 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class DelegatingProjectParser implements GradleProjectParser {
-    protected final GradleProjectParser gpp;
-    protected static List<URL> rewriteClasspath;
-    protected static RewriteClassLoader rewriteClassLoader;
+
+    @Nullable
+    protected GradleProjectParser gpp;
+
+    private final List<URL> rewriteClasspath;
+
+    @Nullable
+    protected RewriteClassLoader rewriteClassLoader;
+
+    private final Project project;
+
+    private final RewriteExtension extension;
 
     public DelegatingProjectParser(Project project, RewriteExtension extension, Set<Path> classpath) {
+        this.project = project;
+        this.extension = extension;
         try {
             List<URL> classpathUrls = classpath.stream()
                     .map(Path::toUri)
@@ -56,56 +68,61 @@ public class DelegatingProjectParser implements GradleProjectParser {
                     .getResource("/org/openrewrite/gradle/isolated/DefaultProjectParser.class")
                     .toString());
             classpathUrls.add(currentJar);
-            if(rewriteClassLoader == null || !classpathUrls.equals(rewriteClasspath)) {
-                if (rewriteClassLoader != null) {
-                    rewriteClassLoader.close();
-                }
-                rewriteClassLoader = new RewriteClassLoader(classpathUrls);
-                rewriteClasspath = classpathUrls;
-            }
-
-            Class<?> gppClass = Class.forName("org.openrewrite.gradle.isolated.DefaultProjectParser", true, rewriteClassLoader);
-            assert (gppClass.getClassLoader() == rewriteClassLoader) : "DefaultProjectParser must be loaded from RewriteClassLoader to be sufficiently isolated from Gradle's classpath";
-            gpp = (GradleProjectParser) gppClass.getDeclaredConstructor(Project.class, RewriteExtension.class)
-                    .newInstance(project, extension);
-
+            rewriteClasspath = classpathUrls;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    private GradleProjectParser getProjectParser() {
+        if(gpp == null) {
+            try {
+                if(rewriteClassLoader == null) {
+                    rewriteClassLoader = new RewriteClassLoader(rewriteClasspath);
+                }
+                Class<?> gppClass = Class.forName("org.openrewrite.gradle.isolated.DefaultProjectParser", true, rewriteClassLoader);
+                assert (gppClass.getClassLoader() == rewriteClassLoader) : "DefaultProjectParser must be loaded from RewriteClassLoader to be sufficiently isolated from Gradle's classpath";
+                gpp = (GradleProjectParser) gppClass.getDeclaredConstructor(Project.class, RewriteExtension.class)
+                        .newInstance(project, extension);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return gpp;
+    }
+
     @Override
     public SortedSet<String> getActiveRecipes() {
-        return unwrapInvocationException(gpp::getActiveRecipes);
+        return unwrapInvocationException(getProjectParser()::getActiveRecipes);
     }
 
     @Override
     public SortedSet<String> getActiveStyles() {
-        return unwrapInvocationException(gpp::getActiveStyles);
+        return unwrapInvocationException(getProjectParser()::getActiveStyles);
     }
 
     @Override
     public SortedSet<String> getAvailableStyles() {
-        return unwrapInvocationException(gpp::getAvailableStyles);
+        return unwrapInvocationException(getProjectParser()::getAvailableStyles);
     }
 
     @Override
     public void discoverRecipes(boolean interactive, ServiceRegistry serviceRegistry) {
         unwrapInvocationException(() -> {
-            gpp.discoverRecipes(interactive, serviceRegistry);
+            getProjectParser().discoverRecipes(interactive, serviceRegistry);
             return null;
         });
     }
 
     @Override
     public Collection<Path> listSources() {
-        return unwrapInvocationException(gpp::listSources);
+        return unwrapInvocationException(getProjectParser()::listSources);
     }
 
     @Override
     public void run(Consumer<Throwable> onError) {
         unwrapInvocationException(() -> {
-            gpp.run(onError);
+            getProjectParser().run(onError);
             return null;
         });
     }
@@ -113,17 +130,30 @@ public class DelegatingProjectParser implements GradleProjectParser {
     @Override
     public void dryRun(Path reportPath, boolean dumpGcActivity, Consumer<Throwable> onError) {
         unwrapInvocationException(() -> {
-            gpp.dryRun(reportPath, dumpGcActivity, onError);
+            getProjectParser().dryRun(reportPath, dumpGcActivity, onError);
             return null;
         });
     }
 
     @Override
     public void shutdownRewrite() {
-        unwrapInvocationException(() -> {
-            gpp.shutdownRewrite();
-            return null;
-        });
+        if(gpp != null) {
+            unwrapInvocationException(() -> {
+                gpp.shutdownRewrite();
+                return null;
+            });
+            gpp = null;
+        }
+        if(rewriteClassLoader != null) {
+            try {
+                rewriteClassLoader.close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } finally {
+                rewriteClassLoader = null;
+            }
+        }
+        ApplicationShutdown
     }
 
     protected URL jarContainingResource(String resourcePath) {

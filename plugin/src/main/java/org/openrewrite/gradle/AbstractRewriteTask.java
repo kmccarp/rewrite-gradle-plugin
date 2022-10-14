@@ -20,14 +20,19 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.options.Option;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public abstract class AbstractRewriteTask extends DefaultTask {
     protected ResolveRewriteDependenciesTask resolveDependenciesTask;
     protected boolean dumpGcActivity;
+
+    @Nullable
     protected GradleProjectParser gpp;
     protected RewriteExtension extension;
 
@@ -73,17 +78,20 @@ public abstract class AbstractRewriteTask extends DefaultTask {
     }
 
     @Input
-    public Set<String> getActiveRecipes() {
-        return getProjectParser().getActiveRecipes();
+    public SortedSet<String> getActiveRecipes() {
+        return new TreeSet<>(extension.getActiveRecipes());
     }
 
     @Input
-    public Set<String> getActiveStyles() {
-        return getProjectParser().getActiveStyles();
+    public SortedSet<String> getActiveStyles() {
+        return new TreeSet<>(extension.getActiveStyles());
     }
 
     protected void shutdownRewrite() {
-        getProjectParser().shutdownRewrite();
+        if(gpp != null) {
+            gpp.shutdownRewrite();
+            gpp = null;
+        }
     }
 
 }

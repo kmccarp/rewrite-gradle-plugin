@@ -40,6 +40,7 @@ import org.openrewrite.gradle.RewriteExtension;
 import org.openrewrite.gradle.isolated.ui.RecipeDescriptorTreePrompter;
 import org.openrewrite.groovy.GroovyParser;
 import org.openrewrite.internal.ListUtils;
+import org.openrewrite.internal.TreeVisitorAdapter;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.ipc.http.HttpUrlConnectionSender;
 import org.openrewrite.java.JavaParser;
@@ -58,7 +59,6 @@ import org.openrewrite.quark.Quark;
 import org.openrewrite.remote.Remote;
 import org.openrewrite.shaded.jgit.api.Git;
 import org.openrewrite.style.NamedStyles;
-import org.openrewrite.style.Style;
 import org.openrewrite.tree.ParsingExecutionContextView;
 
 import java.io.*;
@@ -83,7 +83,9 @@ import static org.openrewrite.internal.ListUtils.map;
 
 @SuppressWarnings("unused")
 public class DefaultProjectParser implements GradleProjectParser {
-    private static final JavaTypeCache javaTypeCache = new JavaTypeCache();
+
+    @Nullable
+    private JavaTypeCache javaTypeCache;
     private static final String LOG_INDENT_INCREMENT = "    ";
 
     private final Logger logger = Logging.getLogger(DefaultProjectParser.class);
@@ -614,7 +616,7 @@ public class DefaultProjectParser implements GradleProjectParser {
                     logger.info("Parsing {} Java sources from {}/{}", javaPaths.size(), project.getName(), sourceSet.getName());
                     JavaParser jp = JavaParser.fromJavaVersion()
                             .classpath(dependencyPaths)
-                            .typeCache(javaTypeCache)
+                            .typeCache(getJavaTypeCache())
                             .logCompilationWarningsAndErrors(extension.getLogCompilationWarningsAndErrors())
                             .build();
                     jp.setSourceSet(sourceSet.getName());
@@ -653,7 +655,7 @@ public class DefaultProjectParser implements GradleProjectParser {
                         GradleParser gradleParser = new GradleParser(
                                 GroovyParser.builder()
                                         .styles(styles)
-                                        .typeCache(javaTypeCache)
+                                        .typeCache(getJavaTypeCache())
                                         .logCompilationWarningsAndErrors(false));
                         sourceFiles.addAll(gradleParser.parse(singleton(buildScriptFile.toPath()), baseDir, ctx));
                         alreadyParsed.add(buildScriptFile.toPath());
@@ -731,6 +733,11 @@ public class DefaultProjectParser implements GradleProjectParser {
     public void shutdownRewrite() {
         J.clearCaches();
         Git.shutdown();
+        if(javaTypeCache != null) {
+            javaTypeCache.clear();
+            javaTypeCache = null;
+        }
+        TreeVisitorAdapter.unload(this.getClass().getClassLoader());
     }
 
     private List<J.CompilationUnit> applyStyles(List<J.CompilationUnit> sourceFiles, List<NamedStyles> styles) {
@@ -782,5 +789,12 @@ public class DefaultProjectParser implements GradleProjectParser {
         for (RecipeDescriptor rchild : rd.getRecipeList()) {
             logRecipe(rchild, prefix + "    ");
         }
+    }
+
+    private JavaTypeCache getJavaTypeCache() {
+        if (javaTypeCache == null) {
+            javaTypeCache = new JavaTypeCache();
+        }
+        return javaTypeCache;
     }
 }

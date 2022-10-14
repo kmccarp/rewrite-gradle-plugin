@@ -42,6 +42,10 @@ public class RewriteDiscoverTask extends AbstractRewriteTask {
 
     @TaskAction
     public void run() {
-        getProjectParser().discoverRecipes(interactive, getServices());
+        try {
+            getProjectParser().discoverRecipes(interactive, getServices());
+        } finally {
+            shutdownRewrite();
+        }
     }
 }

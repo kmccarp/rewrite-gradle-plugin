@@ -33,7 +33,7 @@ interface RewritePluginTest {
                     withGradleVersion(gradleVersion)
                 }
             }
-            .withArguments(*args)
+            .withArguments(listOf(*args, "--stacktrace"))
             .withPluginClasspath()
             .forwardOutput()
             .build()

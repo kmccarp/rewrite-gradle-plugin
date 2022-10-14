@@ -15,6 +15,7 @@
  */
 package org.openrewrite.gradle;
 
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
@@ -77,5 +78,10 @@ public class RewriteClassLoader extends URLClassLoader {
             }
         }
         return false;
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
     }
 }
