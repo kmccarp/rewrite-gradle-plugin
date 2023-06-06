@@ -17,7 +17,6 @@ package org.openrewrite.gradle;
 
 
 import org.jetbrains.annotations.Nullable;
-import org.openrewrite.gradle.RewriteExtension;
 
 import javax.inject.Provider;
 import java.io.File;
