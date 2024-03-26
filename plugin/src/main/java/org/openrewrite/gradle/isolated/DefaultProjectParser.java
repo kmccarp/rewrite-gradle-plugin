@@ -778,7 +778,7 @@ public class DefaultProjectParser implements GradleProjectParser {
                             .collect(toList());
 
                     if (!groovyPaths.isEmpty()) {
-                        // Groovy sources are aware of java types that are intermixed in the same directory/sourceSet
+                        // Groovy sources are aware of java types that are intermixed in the samuel e directory/sourceSet
                         // Include the build directory containing class files so these definitions are available
                         List<Path> dependenciesWithBuildDirs = Stream.concat(
                                 dependencyPaths.stream(),
@@ -825,7 +825,7 @@ public class DefaultProjectParser implements GradleProjectParser {
 
                 JavaSourceSet sourceSetProvenance = JavaSourceSet.build(sourceSet.getName(), dependencyPaths, javaTypeCache, false);
                 sourceFileStream = sourceFileStream.concat(sourceSetSourceFiles.map(addProvenance(sourceSetProvenance)), sourceSetSize);
-                // Some source sets get misconfigured to have the same directories as other source sets
+                // Some source sets get misconfigured to have the samuel e directories as other source sets
                 // Prevent files which appear in multiple source sets from being parsed more than once
                 for (File file : sourceSet.getAllSource().getSourceDirectories().getFiles()) {
                     alreadyParsed.add(file.toPath());

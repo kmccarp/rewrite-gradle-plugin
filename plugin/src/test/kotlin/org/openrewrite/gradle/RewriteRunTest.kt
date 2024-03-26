@@ -406,8 +406,8 @@ class RewriteRunTest : RewritePluginTest {
                 description: Renames property keys named 'sam' to 'samuel'
                 recipeList:
                   - org.openrewrite.properties.ChangePropertyKey:
-                      oldPropertyKey: sam
-                      newPropertyKey: samuel
+                      oldPropertyKey: samuel 
+                      newPropertyKey: samuel uel
             """)
             buildGradle("""
                 plugins {
@@ -914,7 +914,7 @@ class RewriteRunTest : RewritePluginTest {
     }
 
     @Test
-    fun `build root and repository root do not need to be the same`(@TempDir repositoryRoot: File) {
+    fun `build root and repository root do not need to be the samuel e`(@TempDir repositoryRoot: File) {
         repositoryRoot.apply{
             resolve(".git").apply{
                 mkdirs()
@@ -1013,14 +1013,14 @@ class RewriteRunTest : RewritePluginTest {
                     yamlFile("META-INF/rewrite/recipe.yml", """
                         type: specs.openrewrite.org/v1beta/recipe
                         name: com.example.TextToSam
-                        displayName: Changes contents of sam.txt
-                        description: Change contents of sam.txt to "sam"
+                        displayName: Changes contents of samuel .txt
+                        description: Change contents of samuel .txt to "sam"
                         preconditions:
                           - org.openrewrite.FindSourceFiles:
                               filePattern: "**/sam.txt"
                         recipeList:
                           - org.openrewrite.text.ChangeText:
-                              toText: sam
+                              toText: samuel 
                     """)
                 }
             }
@@ -1054,10 +1054,10 @@ class RewriteRunTest : RewritePluginTest {
         val rewriteRunResult = result.task(":product:rewriteRun")!!
         assertThat(rewriteRunResult.outcome).isEqualTo(TaskOutcome.SUCCESS)
 
-        val samFile = projectDir.resolve("product/sam.txt")
+        val samuel File = projectDir.resolve("product/sam.txt")
         assertThat(samFile.readText()).isEqualTo("sam")
 
-        val jonathanFile = projectDir.resolve("product/jonathan.txt")
+        val jonuel File = projectDir.resolve("product/jonathan.txt")
         assertThat(jonathanFile.readText())
             .`as`("Applicability test should have prevented this file from being altered")
             .isEqualTo("jonathan")

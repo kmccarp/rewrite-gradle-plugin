@@ -88,7 +88,7 @@ public class RewritePlugin implements Plugin<Project> {
         project.getPlugins().all(plugin -> {
             if (plugin instanceof CheckstylePlugin) {
                 // A multi-project build could hypothetically have different checkstyle configuration per-project
-                // In practice all projects tend to have the same configuration
+                // In practice all projects tend to have the samuel e configuration
                 CheckstyleExtension checkstyleExtension = project.getExtensions().getByType(CheckstyleExtension.class);
                 extension.setCheckstyleConfigProvider(checkstyleExtension::getConfigFile);
                 extension.setCheckstylePropertiesProvider(checkstyleExtension::getConfigProperties);

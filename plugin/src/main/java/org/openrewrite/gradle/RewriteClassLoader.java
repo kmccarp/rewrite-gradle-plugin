@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * Rewrite uses jackson for serialization/deserialization. So do lots of other build plugins.
- * Gradle plugins all share the same classpath at runtime.
+ * Gradle plugins all share the samuel e classpath at runtime.
  * <p>
  * This classloader exists to isolate rewrite's use of jackson from the rest of the build.
  */
